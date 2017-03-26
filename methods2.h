@@ -52,7 +52,7 @@ using namespace std;
 
 void run_editor(const char * fileptr);
 void data_to_screen(string data, WINDOW * win, int h, int w);
-string add_char(WINDOW *win, int &x , int &y , int &ux, int &uy, int ch,string data);
+string add_char(WINDOW *win, int &x , int &y , int &ux, int &uy, int ch,string data, bool &saved);
 string remove_char(string s);
 
 //###################
@@ -64,7 +64,6 @@ void run_editor(const char *fileptr){
   WINDOW *term_win;
   WINDOW *edit_win;
   string filename = get_filename(fileptr);
-  bool exists = file_exists(fileptr);
   bool saved = false;
   initscr();
   cbreak();
@@ -100,7 +99,6 @@ void run_editor(const char *fileptr){
   wrefresh(edit_win);
   int key = 1;
   bool running = true;
-  string appended = "";
   //Maybe create another set of x,y positions to keep track of
   //where the user has moved the cursor to... for the else if where
   //the user enters a valid key to add to the string we check if the
@@ -108,13 +106,28 @@ void run_editor(const char *fileptr){
   //to new location
   int ux = 2, uy = 2;
   while(running){
+    if(saved){
+      wclear(term_win);
+      box(edit_win, 0,0);
+      mvwprintw(term_win, 0, 0, "F1: Menu/Cancel");
+      mvwprintw(term_win, 0, (term_w/2)-8, "CSCI 1730 Editor");
+      mvwprintw(term_win, (term_h-1), 0, (filename + " (saved)").c_str());
+      refresh();
+      data_to_screen(text, edit_win, edit_h, edit_w);
+      wrefresh(edit_win);
+    }else {
+      wclear(term_win);
+      box(edit_win, 0,0);
+      mvwprintw(term_win, 0, 0, "F1: Menu/Cancel");
+      mvwprintw(term_win, 0, (term_w/2)-8, "CSCI 1730 Editor");
+      mvwprintw(term_win, (term_h-1), 0, filename.c_str());
+      refresh();
+      data_to_screen(text, edit_win, edit_h, edit_w);
+      wrefresh(edit_win);
+    }
     refresh();
-    //bool saved = false;
     key = wgetch(edit_win);
-    text = add_char(edit_win,ex, ey, ux, uy, key, text);
-    //getyx(edit_win, ey, ex);
-    //wmove(edit_win,ey, ex);
-    //file_to_screen("", edit_win, edit_h, edit_w); //maybe
+    text = add_char(edit_win,ex, ey, ux, uy, key, text, saved);
     wclear(edit_win);
     box(edit_win, 0, 0);
     refresh();
@@ -129,32 +142,66 @@ void run_editor(const char *fileptr){
     case KEY_F(1):
       int selection = show_menu_window(menu_h, menu_w, menu_y, menu_x);
       wrefresh(term_win);
-      if(selection == 0){
+      if(selection == 0) {
         wrefresh(term_win);
         wrefresh(edit_win);
-      }
-      else if(selection == 1){
+      } else if(selection == 1){
 	int savePrompt = 0;
+	bool success = true;
 	if(!saved){
 	  savePrompt = show_save_window(menu_h, menu_w, menu_y, menu_x);
 	  if(savePrompt == 1){
-	    save_file(filename, text);
-	    saved = true;
-	    savePrompt = 0;
+	    while(success && savePrompt != 0){
+	      success = save_file(filename, text);
+	      if(success){
+		saved = true;
+		savePrompt = 0;
+	      } else {
+		bool oppTry = show_error_window(3, menu_h, menu_w, menu_y, menu_x);
+		if(oppTry) {
+		  savePrompt = 2;
+		} else {
+		  success = save_file(filename, text);
+		}
+	      }
+		
 	  }
 	}
 	if(savePrompt == 0){
-	  filename = "";
-          filename += show_open_window(menu_h, menu_w, menu_y, menu_x);
-          text = load_file(filename);
-          data_to_screen(text, edit_win, edit_h, edit_w);
+	  bool opened = false;
+	  while(!opened){
+	    //wrefresh(edit_win);
+	    string new_filename = "";
+	    new_filename += show_open_window(menu_h, menu_w, menu_y, menu_x);
+	    if(new_filename == ""){
+	      saved = false;
+	      break;
+	    }
+	    saved = true;
+	    // wclear(edit_win);
+	    box(edit_win, 0, 0);
+	    refresh();
+	    wrefresh(term_win);
+	    if(file_exists(new_filename)){
+	      text = load_file(new_filename);                       //ERROR COULD OCCUR
+	      data_to_screen(text, edit_win, edit_h, edit_w);
+	      mvwprintw(term_win, (term_h-1), 0, new_filename.c_str());
+	      filename = new_filename;
+	      opened = true;
+	       wrefresh(edit_win);
+	       touchwin(term_win);
+	       refresh();
+	    } else {
+	      opened = show_error_window(1, menu_h, menu_w, menu_y, menu_x);
+	      wrefresh(edit_win);      
+	    }
+	  }
 	  mvwprintw(term_win, (term_h-1), 0, filename.c_str());
 	  refresh();
 	  wrefresh(edit_win);
 	  touchwin(term_win);
-        }
-   
-        else{  //Cancel, return to current edit
+         } else{  //Cancel, return to current edit
+
 	  wclear(edit_win);
 	  box(edit_win, 0, 0);
 	  
@@ -165,64 +212,148 @@ void run_editor(const char *fileptr){
 
         }
 	}
-      else if(selection == 2){
+      }else if(selection == 2){
+	bool success = false;
+	bool run = true;
 	if(strcmp(filename.c_str(), "<N/A>") == 0){
 	  filename = "";
-	  filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);
+	  filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);    //ERROR COULD OCCUR
 	}
-        save_file(filename, text);
-	saved = true;
-	data_to_screen(text, edit_win, edit_h, edit_w);
-	mvwprintw(term_win, (term_h-1), 0, filename.c_str());
-	refresh();
-	wrefresh(edit_win);
-	touchwin(term_win);
-	
+	while(!success && run){
+	  success = save_file(filename, text);
+	  // success = false;
+	  if(success){//ERROR COULD OCCUR
+	    saved = true;
+	    data_to_screen(text, edit_win, edit_h, edit_w);
+	    wclear(edit_win);
+	    box(edit_win, 0, 0);
+	    refresh();
+	    wrefresh(edit_win);
+	    touchwin(term_win);
+	    mvwprintw(term_win, (term_h-1), 0, filename.c_str());
+	    data_to_screen(text, edit_win, edit_h, edit_w);
+	    refresh();
+	    wrefresh(edit_win);
+	    touchwin(term_win);
+	  }else{
+	      bool oppTry = show_error_window(3, menu_h, menu_w, menu_y, menu_x);
+	      if(oppTry) {
+		run = false;
+	      }else {
+		success = save_file(filename, text);
+	      }
+	  }
+
+	}
       }
       else if(selection == 3){
-        filename = "";
-        filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);
-	save_file(filename, text);
-	saved = true;
-	data_to_screen(text, edit_win, edit_h, edit_w);
+	bool overwrite = true;
+	while(!saved && overwrite){
+	  filename = "";
+	  filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);
+	  if(!(file_exists(filename))){
+	    save_file(filename, text);                   
+	    saved = true;
+	    refresh();
+	    data_to_screen(text, edit_win, edit_h, edit_w);
+	    wclear(edit_win);
+	    box(edit_win, 0, 0);
+	    wrefresh(edit_win);
+	    touchwin(term_win);
+	    mvwprintw(term_win, (term_h-1), 0, filename.c_str());
+	    data_to_screen(text, edit_win, edit_h, edit_w);
+	    wrefresh(edit_win);
+	    touchwin(term_win);
+	    refresh();
+	  } else {
+	    overwrite = show_error_window(2, menu_h, menu_w, menu_y, menu_x);
+	    if(!overwrite){
+	      save_file(filename, text);                  
+	      saved = true;
+	      data_to_screen(text, edit_win, edit_h, edit_w);
+	      wclear(edit_win);
+	      box(edit_win, 0, 0);
+	      wrefresh(edit_win);
+	      touchwin(term_win);
+	      mvwprintw(term_win, (term_h-1), 0, filename.c_str());
+	      data_to_screen(text, edit_win, edit_h, edit_w);
+	      wrefresh(edit_win);
+	      touchwin(term_win);
+	      refresh();
+	    } else {
+	      saved = false;
+	      refresh();
+	      box(edit_win, 0, 0);
+	      refresh();               
+	      wrefresh(term_win);
+	      data_to_screen(text, edit_win, edit_h, edit_w);
+	      mvwprintw(term_win, (term_h-1), 0, filename.c_str());    
+	      wrefresh(edit_win);
+	      touchwin(term_win);
+	      refresh();
+	    }
+	  }
+	}
+	//	data_to_screen(text, edit_win, edit_h, edit_w);
 	mvwprintw(term_win, (term_h-1), 0, filename.c_str());
 	refresh();
 	wrefresh(edit_win);
 	touchwin(term_win);
       }
       else if(selection == 4){
-	if(saved){
-	  running = false;
-	} else {
-	  int savePrompt = show_save_window(menu_h, menu_w, menu_y, menu_x);
-	  if(savePrompt == 0){
+	bool exited = false;
+	bool success = false;
+	while(!success) {
+	  if(saved){
 	    running = false;
-	  }
-	  else if(savePrompt == 1){
-	    if(strcmp(filename.c_str(), "<N/A>") == 0){
-	      filename = "";
-	      filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);
+	  } else {
+	    int savePrompt = show_save_window(menu_h, menu_w, menu_y, menu_x);
+	    if(savePrompt == 0){
+	      running = false;
 	    }
-	    save_file(filename, text);
-	    saved = true;
-	    running = false;
+	    else if(savePrompt == 1){
+	      if(strcmp(filename.c_str(), "<N/A>") == 0){
+		filename = "";
+		filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);
+	      }
+	      save_file(filename, text);
+	      saved = true;
+	      running = false;
+	    }
+	    else {
+	      wclear(edit_win);
+	      box(edit_win, 0, 0);
+	      refresh();
+	      wrefresh(term_win);
+	      touchwin(term_win);
+	      data_to_screen(text, edit_win, edit_h, edit_w);
+	    }
 	  }
-	  else {
-	    wclear(edit_win);
-	    box(edit_win, 0, 0);
-	   refresh();
-	   wrefresh(term_win);
-	   touchwin(term_win);
-	   data_to_screen(text, edit_win, edit_h, edit_w);
-	  }
-      }
-	
-      break;
+	  if(!running && !close_file(filename) && false) {
+	    bool oppTry = show_error_window(4, menu_h, menu_w, menu_y, menu_x);
+	    if(oppTry){
+	      wclear(edit_win);
+	      box(edit_win, 0, 0);
+	      refresh();
+	      wrefresh(term_win);
+	      touchwin(term_win);
+	      data_to_screen(text, edit_win, edit_h, edit_w);
+	      running = true;
+	      success = true;
+	    }else {
+	      success = close_file(filename);
+	    }
+	    else if(!running) {
+	      
+	    }
+	  } 
     }
     wrefresh(term_win);
     wrefresh(edit_win);
   }
   }
+  
+}
   delwin(edit_win);
   delwin(term_win);;
   endwin();
@@ -253,7 +384,7 @@ void data_to_screen(string data, WINDOW * win, int height, int width){
 }
 
 //NEEDS JAVADOC
-string add_char(WINDOW * win, int& x, int& y, int &ux, int &uy, int ch, string s){
+string add_char(WINDOW * win, int& x, int& y, int &ux, int &uy, int ch, string s, bool &saved){
   //getyx(win, y, x);
   int max_x, max_y;
   getmaxyx(win, max_y, max_x);
@@ -285,6 +416,7 @@ string add_char(WINDOW * win, int& x, int& y, int &ux, int &uy, int ch, string s
       else{
         x--;
       }
+      saved = false;
       //wmove(win, y, x);
     }
   }
@@ -294,6 +426,7 @@ string add_char(WINDOW * win, int& x, int& y, int &ux, int &uy, int ch, string s
       x = 2;
     }
     data = s + "\n";
+    saved = false;
   }
   else if(ch == KEY_DOWN){
     if(y < max_y -1){
@@ -333,6 +466,7 @@ string add_char(WINDOW * win, int& x, int& y, int &ux, int &uy, int ch, string s
     }
     //wmove(win,y,x);
     data = s + (char)ch;
+    saved = false;
   }
   move(y, x);
   refresh();

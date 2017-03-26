@@ -50,18 +50,18 @@ using namespace std;
 int main(const int argc, const char * argv[]);
 
 bool file_exists(const char * fileptr);
-void save_file(string filename, string data);
+bool save_file(string filename, string data);
 string load_file(const char * fileptr);
-bool close_file(int &fd);
+bool close_file(string filename);
 string get_filename(const char * fileptr);
 
 void run_editor(const char * fileptr);
 void data_to_screen(string data, WINDOW * win, int h, int w);
-string add_char(WINDOW *win, int &x , int &y , int &ux, int &uy, int ch,string data);
+string add_char(WINDOW *win, int &x , int &y , int &ux, int &uy, int ch,string data,bool &saved);
 string remove_char(string s);
 
 int show_menu_window(int menu_h, int menu_w, int menu_y, int menu_x);
-int show_error_window(int code, int err_h, int err_w, int err_y, int err_x);
+bool show_error_window(int code, int err_h, int err_w, int err_y, int err_x);
 string show_open_window(int open_h, int open_w, int open_y, int open_x);
 int show_save_window(int save_h, int save_w, int save_y, int save_x);
 string show_saveas_window(int sa_h, int sa_w, int sa_y, int sa_x);

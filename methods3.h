@@ -52,7 +52,7 @@ This is the supporting method file for Project2.
 using namespace std;
 
 int show_menu_window(int menu_h, int menu_w, int menu_y, int menu_x);
-int show_error_window(int code, int err_h, int err_w, int err_y, int err_x);
+bool show_error_window(int code, int err_h, int err_w, int err_y, int err_x);
 string show_open_window(int open_h, int open_w, int open_y, int open_x);
 int show_save_window(int save_h, int save_w, int save_y, int save_x);
 string show_saveas_window(int sa_h, int sa_w, int sa_y, int sa_x);
@@ -145,11 +145,12 @@ int show_menu_window(int menu_h, int menu_w, int menu_y, int menu_x){
 
 //NEEDS CLEANING
 //NEEDS JAVADOC
-int show_error_window(int code, int err_h, int err_w, int err_y, int err_x){
+bool show_error_window(int code, int err_h, int err_w, int err_y, int err_x){
   WINDOW *error_win;
   WINDOW *error_subwin;
   MENU *error_menu;
   ITEM **items;
+  bool try_again;
   initscr();
   const char * choices[] = {"Yes", "No"};
   int n_choices = ARRAY_SIZE(choices);
@@ -162,21 +163,36 @@ int show_error_window(int code, int err_h, int err_w, int err_y, int err_x){
   error_win = newwin(err_h, err_w, err_y, err_x);
   error_subwin = derwin(error_win, (err_h/2), (err_w/2), (err_h*0.4), (err_w/3));
   keypad(error_win, true);
-
-
   set_menu_win(error_menu, error_win);
   set_menu_sub(error_menu, error_subwin);
   set_menu_mark(error_menu, "* ");
   box(error_win, 0, 0);
+  string err_mssg = "";
+  
   wrefresh(error_win);
   cbreak();
-  post_menu(error_menu);
+  
+  switch(code){
+  case 1:
+    err_mssg += "File Does Not Exist. Try Again?";
+    break;
+  case 2:
+    err_mssg += "File Already Exists. Overwrite?";
+    break;
+  case 3:
+    err_mssg += "Error Saving File. Try Again?";
+  case 4:
+    err_mssg += "Error Closing File. Try Again?";
+  }
+  
+ 
   wrefresh(error_win);
-
+  mvwprintw(error_win, 3, 1, err_mssg.c_str());
+  post_menu(error_menu);
+  
   int key = 1;
-  int choice = 0;
+  int err = 0; //0 if no error,
   bool selected = false;
-
   while(key != KEY_F(1) && !selected){
     key = wgetch(error_win);
     switch(key){
@@ -187,7 +203,6 @@ int show_error_window(int code, int err_h, int err_w, int err_y, int err_x){
       menu_driver(error_menu, REQ_UP_ITEM);
       break;
     case 10:
-      //MORE TO DO HERE?
       selected = true;
       break;
     }
@@ -197,15 +212,11 @@ int show_error_window(int code, int err_h, int err_w, int err_y, int err_x){
   if(selected){
     ITEM *cur_item = current_item(error_menu);
     const char * it = item_name((const ITEM*)cur_item);
-    if(strcmp(it,"Open") == 0){
-      choice = 1;
-    } else if (strcmp(it,"Save") == 0){
-      choice = 2;
-    } else if (strcmp(it,"Save As") == 0){
-      choice = 3;
-    } else if (strcmp(it,"Exit") == 0){
-      choice = 4;
-    }
+    if(strcmp(it,"Yes") == 0){
+      try_again = false;
+    } else if (strcmp(it,"No") == 0){
+      try_again = true;
+    } 
   }
 
   unpost_menu(error_menu);
@@ -215,14 +226,12 @@ int show_error_window(int code, int err_h, int err_w, int err_y, int err_x){
 
   wborder(error_win, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
   wrefresh(error_win);
-  //mvprintw(2, (menu_w/2)-4, NULL);
   wrefresh(error_win);
   free_menu(error_menu);
   wrefresh(error_win);
   delwin(error_subwin);
   delwin(error_win);
-  // endwin();
-  return choice; //USER EXITS MENU (F1 Pressed)
+  return try_again; //USER EXITS MENU (F1 Pressed)
 }
 
 //NEEDS CLEANING
@@ -259,7 +268,7 @@ string show_open_window(int open_h, int open_w, int open_y, int open_x){
   // box(form, 0, 0);
   post_form(form);
   mvwprintw(open_win, 1, open_w/2 -9, "Enter File to Open");
-  mvwprintw(open_win, 2, open_w/2 -7, "And Press Enter");
+  mvwprintw(open_win, 2, open_w/2 -10, "And Press Enter Twice");
   
   wrefresh(open_win);
   refresh();
@@ -271,6 +280,13 @@ string show_open_window(int open_h, int open_w, int open_y, int open_x){
       form_driver(form, ch);
       filename += ch;
     }
+    else if(ch == KEY_BACKSPACE || ch == 127){
+      ch = REQ_PREV_CHAR;
+      form_driver(form, ch);
+      ch = REQ_DEL_CHAR;
+      form_driver(form, ch);
+      filename = filename.substr(0, filename.size()-1);
+    }
     else if(ch == 10){
       selected = true;
     }
@@ -281,11 +297,14 @@ string show_open_window(int open_h, int open_w, int open_y, int open_x){
   free_form(form);
   free_field(field[0]);
   free_field(field[1]);
+  wborder(open_win,' ',' ',' ',' ',' ',' ',' ',' ');
+  wclear(open_win);
+  wclear(open_subwin);
   delwin(open_win);
   delwin(open_subwin);
+  refresh();
   //endwin();
-  wborder(open_win,' ',' ',' ',' ',' ',' ',' ',' ');
-  clear();
+  
   return filename; //USER EXITS MENU (F1 Pressed)
 }
 
@@ -315,7 +334,6 @@ int show_save_window(int save_h, int save_w, int save_y, int save_x){
   set_menu_sub(save_menu, save_subwin);
   set_menu_mark(save_menu, "* ");
   
-  // mvwprintw(save_win, 1, open_w/2 -9, "Enter File to Open");
   box(save_win, 0, 0);
   wrefresh(save_win);
   refresh();
@@ -409,7 +427,7 @@ string show_saveas_window(int sa_h, int sa_w, int sa_y, int sa_x){
   // box(form, 0, 0);
   post_form(form);
   mvwprintw(sa_win, 1, sa_w/2 -9, "Enter Name To Save As");
-  mvwprintw(sa_win, 2, sa_w/2 -7, "And Press Enter");
+  mvwprintw(sa_win, 2, sa_w/2 -9, "And Press Enter Twice");
   
   wrefresh(sa_win);
   refresh();
@@ -417,9 +435,16 @@ string show_saveas_window(int sa_h, int sa_w, int sa_y, int sa_x){
   int ch;
   bool selected = false;
   while((ch = wgetch(sa_win)) != KEY_F(1) && !selected){
-    if(ch >= 32 && ch < 127){
+    if(ch >= 32 && ch < 127 && ch != KEY_BACKSPACE){
       form_driver(form, ch);
       filename += ch;
+    }
+    else if(ch == KEY_BACKSPACE || ch==127){
+      ch = REQ_PREV_CHAR;
+      form_driver(form, ch);
+      ch = REQ_DEL_CHAR;
+      form_driver(form, ch);
+      filename = filename.substr(0, filename.size()-1);
     }
     else if(ch == 10){
       selected = true;
@@ -443,6 +468,5 @@ string show_saveas_window(int sa_h, int sa_w, int sa_y, int sa_x){
 
 
 #endif
-
 
 
