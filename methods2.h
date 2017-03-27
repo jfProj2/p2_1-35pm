@@ -59,7 +59,7 @@ string remove_char(string s);
 //METHOD DESCRIPTIONS
 //###################
 
-//NEEDS JAVADOC
+
 void run_editor(const char *fileptr){
   WINDOW *term_win;
   WINDOW *edit_win;
@@ -217,12 +217,11 @@ void run_editor(const char *fileptr){
 	bool run = true;
 	if(strcmp(filename.c_str(), "<N/A>") == 0){
 	  filename = "";
-	  filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);    //ERROR COULD OCCUR
+	  filename += show_saveas_window(menu_h, menu_w, menu_y, menu_x);    
 	}
 	while(!success && run){
 	  success = save_file(filename, text);
-	  // success = false;
-	  if(success){//ERROR COULD OCCUR
+	  if(success){
 	    saved = true;
 	    data_to_screen(text, edit_win, edit_h, edit_w);
 	    wclear(edit_win);
@@ -235,7 +234,7 @@ void run_editor(const char *fileptr){
 	    refresh();
 	    wrefresh(edit_win);
 	    touchwin(term_win);
-	  }else{
+	  } else{
 	      bool oppTry = show_error_window(3, menu_h, menu_w, menu_y, menu_x);
 	      if(oppTry) {
 		run = false;
@@ -301,9 +300,6 @@ void run_editor(const char *fileptr){
 	touchwin(term_win);
       }
       else if(selection == 4){
-	bool exited = false;
-	bool success = false;
-	while(!success) {
 	  if(saved){
 	    running = false;
 	  } else {
@@ -329,31 +325,15 @@ void run_editor(const char *fileptr){
 	      data_to_screen(text, edit_win, edit_h, edit_w);
 	    }
 	  }
-	  if(!running && !close_file(filename) && false) {
-	    bool oppTry = show_error_window(4, menu_h, menu_w, menu_y, menu_x);
-	    if(oppTry){
-	      wclear(edit_win);
-	      box(edit_win, 0, 0);
-	      refresh();
-	      wrefresh(term_win);
-	      touchwin(term_win);
-	      data_to_screen(text, edit_win, edit_h, edit_w);
-	      running = true;
-	      success = true;
-	    }else {
-	      success = close_file(filename);
-	    }
-	    else if(!running) {
-	      
-	    }
-	  } 
-    }
-    wrefresh(term_win);
-    wrefresh(edit_win);
-  }
+	  
+	}
+    
+	wrefresh(term_win);
+	wrefresh(edit_win);
   }
   
-}
+  
+  }
   delwin(edit_win);
   delwin(term_win);;
   endwin();

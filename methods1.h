@@ -50,27 +50,27 @@ This is the supporting method file for Project2.
 //##########
 using namespace std;
 
+//These functions deal with IO
 bool file_exists(string filename);
 bool save_file(string filename, string data);
 string load_file(const char * fileptr);
 bool close_file(int &fd);
 string get_filename(const char * fileptr);
 
-//###################
-//METHOD DESCRIPTIONS
-//###################
 
-//MIGHT NOT BE NEEDED
-//NEEDS JAVADOC
-//[ENOENT] O_CREAT is not set and the named file does not exist.
-
+/**Test if file exists using stat
+   true if exists, false if not
+*/
 bool file_exists(string filename){
   struct stat buf;
   return((stat(filename.c_str(), &buf)) == 0);
 }
 
 
-//NEEDS JAVADOC
+/**Saves file with specified filename and contents s
+   Returns true if successful and false otherwise
+   Creates a new, blank file and writes the string to it
+*/
 bool save_file(string filename, string s){
   bool success = true;
   int fd = open(filename.c_str(), O_RDWR| O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
@@ -89,49 +89,51 @@ bool save_file(string filename, string s){
 }
 
 
-//MORE FUNCTIONALITY WITH ERRORS
-//NEEDS JAVADOC
+/**Loads file specified by filename
+   Returns a string representing the file contents
+ */
 string load_file(string filename){
+  string data;
   int fd = open(filename.c_str(), O_RDWR | O_APPEND);
   if(fd < 0){
-    int open_err_num = errno;
-    if(filename == ""){
+    if(filename == "<N/A>"){
       return "";
     } else {
+      data = "LOAD_ERR";
     }
   }
   else{
     const int BUFF_SIZE = 1024;
     char buffer[BUFF_SIZE];
     int n = 0;
-    string data = "";
+    data = "";
     while((n = read(fd, buffer, BUFF_SIZE)) > 0){
       for(int i = 0; i < n; i++){
         data += buffer[i];
       }
     }
     if(n < 0){
-      int read_err_num = errno;
-      //err window
-      return "";
+      return "LOAD_ERR";
     }else {
     return data;
     }
   }
 }
 
-//ERROR CHECK FUNCTIONALITY
-//NEEDS JAVADOC
+/* Closes file specified by filename
+   Returns whether this was successful
+*/
 bool close_file(string filename){
   return((close(*filename.c_str())) != -1);
 }
 
 
-//MIGHT NOT BE NEEDED
-//NEEDS JAVADOC
+/*Uses pointer to access filename
+  Returns string of filename if pointer not null, and "<N/A>" otherwise
+*/
 string get_filename(const char * fileptr){
   if (fileptr == nullptr){
-    return "Untitled";
+    return "<N/A>";
   }
   else {
     string fn = fileptr;

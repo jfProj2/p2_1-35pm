@@ -47,19 +47,23 @@ This is the main method for Project2.
 //##########
 using namespace std;
 
+//driver of program
 int main(const int argc, const char * argv[]);
 
+//IO related functions
 bool file_exists(const char * fileptr);
 bool save_file(string filename, string data);
 string load_file(const char * fileptr);
 bool close_file(string filename);
 string get_filename(const char * fileptr);
 
+//running editor and typing
 void run_editor(const char * fileptr);
 void data_to_screen(string data, WINDOW * win, int h, int w);
 string add_char(WINDOW *win, int &x , int &y , int &ux, int &uy, int ch,string data,bool &saved);
 string remove_char(string s);
 
+//windows, menus and user inputs with menus
 int show_menu_window(int menu_h, int menu_w, int menu_y, int menu_x);
 bool show_error_window(int code, int err_h, int err_w, int err_y, int err_x);
 string show_open_window(int open_h, int open_w, int open_y, int open_x);
@@ -69,14 +73,18 @@ string show_saveas_window(int sa_h, int sa_w, int sa_y, int sa_x);
 //########
 //MAIN
 //########
+
 int main(const int argc, const char * argv[]){
 
+  //No file: open editor to untitled blank file
   if(argc == 1){
-    run_editor("<N/A>");
+    run_editor(nullptr);
   }
+  //One file specified: editor opens to that file
   else if(argc == 2){
     run_editor(argv[1]);
   }
+  //If >1 passed in, editor will not open and give this error mssg
   else{
     printf("ERROR: Too many arguments to ./1730ed\n");
     printf("Retry run command with proper syntax\n\n");
@@ -84,5 +92,5 @@ int main(const int argc, const char * argv[]){
     return EXIT_FAILURE;
   }
 
-  return 22;
+  return 0;
 }
